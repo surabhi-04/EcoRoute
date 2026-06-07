@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoRoute — Green Logistics &amp; Multi-Tenant Compliance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- ① Tailwind config + theme guard — MUST be before CDN script -->
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Outfit', 'sans-serif'] } } }
+        };
+        // Anti-FOUC: apply theme before first paint
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'dark' || (!saved && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }());
+    </script>
+    <!-- ② Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* ─ Base layout ─────────────────────────────────────────── */
+        html, body {
+            margin: 0; padding: 0;
+            min-height: 100%;
+            font-family: 'Outfit', sans-serif;
+            background-color: #f8fafc;
+            transition: background-color 0.4s ease, color 0.3s ease;
+        }
+        html.dark, html.dark body {
+            background-color: #0b0f19;
+        }
+
+        /* ─ Dot-matrix grids (can't be in Tailwind CDN JIT) ──────── */
+        .dot-light {
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .dot-dark {
+            background-image: radial-gradient(#334155 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* ─ Animated route-path dashes ───────────────────────────── */
+        @keyframes dashMove {
+            to { stroke-dashoffset: -400; }
+        }
+        .rp  { stroke-dasharray: 8 6;  animation: dashMove 8s  linear infinite; }
+        .rps { stroke-dasharray: 12 8; animation: dashMove 14s linear infinite; }
+
+        /* ─ Smooth theme transitions ─────────────────────────────── */
+        *, *::before, *::after {
+            transition: background-color .25s ease, color .15s ease,
+                        border-color .2s ease, opacity .3s ease;
+        }
+    </style>
+</head>
+
+<!--
+    body = full-viewport flex column
+    header  → fixed height navbar
+    main    → flex-1, flex column itself, centres content
+    footer  → short footer
+-->
+<body style="display:flex; flex-direction:column; min-height:100vh;"
+      class="bg-slate-50 text-slate-900 dark:bg-[#0b0f19] dark:text-slate-100">
+
+<!-- ═══════════════════════════════════════ NAVBAR ═══════════════════════════════════════ -->
+<header class="sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800
+               bg-white/80 dark:bg-[#0b0f19]/70 backdrop-blur-md"
+        style="height:72px; display:flex; align-items:center;">
+    <div class="max-w-7xl mx-auto px-6 w-full flex items-center justify-between">
+
+        <!-- Brand -->
+        <div class="flex items-center gap-3">
+            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl
+                         bg-emerald-100 dark:bg-emerald-950/60
+                         border border-emerald-300 dark:border-emerald-500/30
+                         text-emerald-600 dark:text-emerald-400">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                     stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M6.115 5.19l.319 1.913A6 6 0 0 0 8.11 10.36L9.75 12l-.387.775c-.217.433-.132.956.21 1.298l1.348 1.348c.21.21.329.497.329.795v1.089c0 .426.24.815.622 1.006l.153.076c.433.217.956.132 1.298-.21l.723-.723a8.7 8.7 0 0 0 2.288-4.042 1.087 1.087 0 0 0-.358-1.099l-1.33-1.108c-.251-.21-.582-.299-.905-.245l-1.17.195a1.125 1.125 0 0 1-.98-.314l-.295-.295a1.125 1.125 0 0 1 0-1.591l.13-.132a1.125 1.125 0 0 1 1.3-.21l.603.302a.809.809 0 0 0 1.086-1.086L14.25 7.5l1.256-.837a4.5 4.5 0 0 1 1.528-.743l1.88-.565a.75.75 0 0 0 .494-.5l.206-.968M6.115 5.19A9 9 0 1 0 17.18 4.64M6.115 5.19A8.965 8.965 0 0 1 12 3c1.929 0 3.716.607 5.18 1.64"/>
+                </svg>
+            </span>
+            <span class="text-lg font-bold tracking-tight">EcoRoute</span>
+        </div>
+
+        <!-- Theme toggle -->
+        <button id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark"
+                class="p-2.5 rounded-xl border shadow-sm
+                       bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700
+                       text-slate-500 dark:text-yellow-300
+                       hover:scale-105 active:scale-95 transition-transform duration-150">
+            <!-- Sun (visible in dark) -->
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                 stroke-width="2" stroke="currentColor"
+                 class="w-5 h-5 hidden dark:block">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/>
+            </svg>
+            <!-- Moon (visible in light) -->
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                 stroke-width="2" stroke="currentColor"
+                 class="w-5 h-5 block dark:hidden">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/>
+            </svg>
+        </button>
+    </div>
+</header>
+
+<!-- ════════════════════════════════════════ MAIN ════════════════════════════════════════ -->
+<!--
+    KEY FIX: main is flex-1 AND itself a flex container centring its child.
+    This guarantees the hero content is centred regardless of viewport height.
+-->
+<main style="flex:1; position:relative; overflow:hidden;
+             display:flex; align-items:center; justify-content:center;">
+
+    <!-- ── BG LAYER 1 : Dot-matrix grid ─────────────────────────────────── -->
+    <!-- Light variant -->
+    <div class="dot-light dark:opacity-0"
+         style="position:absolute;inset:0;opacity:.65;pointer-events:none;"></div>
+    <!-- Dark variant -->
+    <div class="dot-dark opacity-0 dark:opacity-40"
+         style="position:absolute;inset:0;pointer-events:none;"></div>
+
+    <!-- ── BG LAYER 2 : Logistics route-network SVG ──────────────────────── -->
+    <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.18;"
+         class="dark:opacity-[.08] mix-blend-multiply dark:mix-blend-screen"
+         viewBox="0 0 1200 700" fill="none" preserveAspectRatio="xMidYMid slice"
+         xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+
+        <!-- Static corridor outlines -->
+        <path d="M60 350 C200 200,400 150,600 200 S900 280,1140 180"
+              stroke="#10b981" stroke-width="1.5" stroke-linecap="round" opacity=".6"/>
+        <path d="M80 500 C250 430,450 380,620 400 S950 440,1150 360"
+              stroke="#14b8a6" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+        <path d="M100 200 C300 250,500 300,700 260 S1000 200,1150 300"
+              stroke="#34d399" stroke-width="1"   stroke-linecap="round" opacity=".4"/>
+        <path d="M50 580 C200 520,500 490,750 510 S1000 540,1160 480"
+              stroke="#6ee7b7" stroke-width="1"   stroke-linecap="round" opacity=".35"/>
+        <path d="M150 100 C400 300,700 500,1100 620"
+              stroke="#10b981" stroke-width="1"   stroke-linecap="round" opacity=".3"/>
+        <path d="M1050 80 C800 250,550 400,100 600"
+              stroke="#14b8a6" stroke-width="1"   stroke-linecap="round" opacity=".25"/>
+
+        <!-- Animated dashed freight-lane overlays -->
+        <path class="rp"  d="M60 350 C200 200,400 150,600 200 S900 280,1140 180"
+              stroke="#34d399" stroke-width="2" stroke-linecap="round"/>
+        <path class="rps" d="M80 500 C250 430,450 380,620 400 S950 440,1150 360"
+              stroke="#2dd4bf" stroke-width="2" stroke-linecap="round"/>
+        <path class="rp"  d="M150 100 C400 300,700 500,1100 620"
+              stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+
+        <!-- Port / hub node markers -->
+        <circle cx="60"   cy="350" r="5" fill="#10b981" opacity=".75"/>
+        <circle cx="600"  cy="200" r="5" fill="#10b981" opacity=".75"/>
+        <circle cx="1140" cy="180" r="5" fill="#10b981" opacity=".75"/>
+        <circle cx="80"   cy="500" r="4" fill="#14b8a6" opacity=".65"/>
+        <circle cx="620"  cy="400" r="4" fill="#14b8a6" opacity=".65"/>
+        <circle cx="1150" cy="360" r="4" fill="#14b8a6" opacity=".65"/>
+        <circle cx="150"  cy="100" r="4" fill="#34d399" opacity=".55"/>
+        <circle cx="1100" cy="620" r="4" fill="#34d399" opacity=".55"/>
+        <circle cx="1050" cy="80"  r="4" fill="#2dd4bf" opacity=".55"/>
+        <circle cx="100"  cy="600" r="4" fill="#2dd4bf" opacity=".55"/>
+
+        <!-- Latitude / longitude grid lines -->
+        <line x1="0" y1="233" x2="1200" y2="233" stroke="#94a3b8" stroke-width=".5" opacity=".2" stroke-dasharray="4 8"/>
+        <line x1="0" y1="466" x2="1200" y2="466" stroke="#94a3b8" stroke-width=".5" opacity=".2" stroke-dasharray="4 8"/>
+        <line x1="400" y1="0" x2="400" y2="700" stroke="#94a3b8" stroke-width=".5" opacity=".2" stroke-dasharray="4 8"/>
+        <line x1="800" y1="0" x2="800" y2="700" stroke="#94a3b8" stroke-width=".5" opacity=".2" stroke-dasharray="4 8"/>
+    </svg>
+
+    <!-- ── BG LAYER 3 : Floating glow orbs ───────────────────────────────── -->
+    <div class="animate-pulse bg-emerald-500/10 dark:bg-emerald-500/5"
+         style="position:absolute;top:40px;left:40px;width:288px;height:288px;
+                border-radius:9999px;filter:blur(60px);pointer-events:none;"></div>
+    <div class="bg-teal-500/10 dark:bg-teal-500/5"
+         style="position:absolute;bottom:40px;right:40px;width:384px;height:384px;
+                border-radius:9999px;filter:blur(70px);pointer-events:none;"></div>
+    <div class="bg-emerald-300/10 dark:bg-emerald-900/20"
+         style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                width:520px;height:520px;border-radius:9999px;
+                filter:blur(90px);pointer-events:none;opacity:.3;"></div>
+
+    <!-- ── CONTENT LAYER (z-index always on top) ─────────────────────────── -->
+    <div style="position:relative;z-index:10;width:100%;max-width:56rem;
+                padding:6rem 1.5rem;text-align:center;">
+
+        <!-- Branding badge -->
+        <div class="inline-flex items-center gap-2 px-4 py-2 mb-10 rounded-full
+                    bg-white/70 dark:bg-slate-900/50
+                    border border-slate-200 dark:border-slate-800
+                    shadow-md backdrop-blur-sm
+                    text-emerald-700 dark:text-emerald-400
+                    text-xs font-bold uppercase tracking-widest">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+            Platform Access Gateway
+        </div>
+
+        <!-- Hero heading -->
+        <h1 class="text-5xl sm:text-6xl font-extrabold tracking-tight leading-tight
+                   text-slate-900 dark:text-white mb-6">
+            Green Fleet Logistics<br>
+            <span class="bg-clip-text text-transparent
+                         bg-gradient-to-r from-emerald-600 to-teal-500
+                         dark:from-emerald-400 dark:to-teal-400">
+                &amp; Carbon Compliance
+            </span>
+        </h1>
+
+        <!-- Sub-heading -->
+        <p class="max-w-2xl mx-auto text-lg leading-relaxed font-medium
+                  text-slate-600 dark:text-slate-400 mb-10">
+            EcoRoute empowers logistics organisations to track real-time shipment
+            carbon emissions, validate spatial route distances, and provision
+            environment-compliance certificates within isolated tenant workspaces.
+        </p>
+
+        <!-- Feature pills -->
+        <div class="flex flex-wrap items-center justify-center gap-3 mb-12">
+            <span class="px-3 py-1.5 rounded-full text-xs font-semibold
+                         bg-emerald-50 dark:bg-emerald-950/40
+                         border border-emerald-200 dark:border-emerald-500/30
+                         text-emerald-700 dark:text-emerald-400">
+                🌍 Multi-Tenant Isolation
+            </span>
+            <span class="px-3 py-1.5 rounded-full text-xs font-semibold
+                         bg-teal-50 dark:bg-teal-950/40
+                         border border-teal-200 dark:border-teal-500/30
+                         text-teal-700 dark:text-teal-400">
+                📦 Real-Time CO₂ Tracking
+            </span>
+            <span class="px-3 py-1.5 rounded-full text-xs font-semibold
+                         bg-slate-100 dark:bg-slate-800/60
+                         border border-slate-200 dark:border-slate-700
+                         text-slate-600 dark:text-slate-400">
+                🛣️ Dijkstra Route Engine
+            </span>
+            <span class="px-3 py-1.5 rounded-full text-xs font-semibold
+                         bg-emerald-50 dark:bg-emerald-950/40
+                         border border-emerald-200 dark:border-emerald-500/30
+                         text-emerald-700 dark:text-emerald-400">
+                📋 Compliance Certificates
+            </span>
+        </div>
+
+        <!-- CTA buttons -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <a th:href="@{/login}"
+               class="w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-sm
+                      uppercase tracking-wider text-white
+                      bg-emerald-600 hover:bg-emerald-500
+                      shadow-lg shadow-emerald-600/25
+                      active:scale-95 transition-all duration-150">
+                Go to Workspace Login
+            </a>
+            <a th:href="@{/register/tenant}"
+               class="w-full sm:w-auto px-8 py-4 rounded-xl font-semibold text-sm
+                      uppercase tracking-wider
+                      border border-slate-300 dark:border-slate-700
+                      text-slate-700 dark:text-slate-300
+                      hover:bg-slate-100 dark:hover:bg-slate-800/70
+                      active:scale-95 transition-all duration-150 backdrop-blur-sm">
+                Register New Tenant
+            </a>
+        </div>
+
+        <!-- Admin gate link -->
+        <a th:href="@{/admin/login}"
+           class="text-xs font-semibold uppercase tracking-widest
+                  text-slate-400 dark:text-slate-600
+                  hover:text-emerald-600 dark:hover:text-emerald-400
+                  transition-colors duration-150">
+            Infrastructure Control Access Gate
+        </a>
+    </div>
+</main>
+
+<!-- ════════════════════════════════════════ FOOTER ══════════════════════════════════════ -->
+<footer class="border-t border-slate-200 dark:border-slate-800 text-center
+               text-xs text-slate-400 dark:text-slate-600 py-5">
+    &copy; 2026 EcoRoute Green Logistics Platform. All Rights Reserved.
+</footer>
+
+<script>
+    function toggleTheme() {
+        var isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+</script>
+</body>
+</html>

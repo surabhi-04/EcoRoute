@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${activeCompany} + ' — EcoRoute Dashboard'">EcoRoute Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- ① Config BEFORE CDN -->
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Outfit', 'sans-serif'] } } }
+        };
+        // Immediate execution to prevent flash of wrong theme
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <!-- ② CDN after config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        html, body { background-color: #f8fafc; min-height: 100%; transition: background-color 0.4s ease; }
+        html.dark, html.dark body { background-color: #0f172a; }
+        * { transition: background-color 0.25s ease, border-color 0.2s ease, color 0.15s ease, box-shadow 0.2s ease; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body class="min-h-screen font-sans pb-12 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+
+    <style>
+        /* Tab panel visibility */
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .tab-btn { position:relative; padding:.6rem 1.25rem; font-size:.8rem; font-weight:700;
+                   text-transform:uppercase; letter-spacing:.05em; border-radius:.75rem;
+                   transition:all .2s ease; cursor:pointer; border:none; background:transparent; }
+        .tab-btn.active {
+            background: #10b981; color:#fff;
+            box-shadow: 0 4px 14px rgba(16,185,129,.25);
+        }
+        html.dark .tab-btn.active { background:#059669; }
+        .tab-btn:not(.active) { color:#64748b; }
+        .tab-btn:not(.active):hover { background:#f1f5f9; color:#1e293b; }
+        html.dark .tab-btn:not(.active) { color:#94a3b8; }
+        html.dark .tab-btn:not(.active):hover { background:#1e293b; color:#e2e8f0; }
+    </style>
+
+    <!-- ── HEADER ──────────────────────────────────────────────────────────── -->
+    <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-slate-800
+                   bg-white/90 dark:bg-slate-900/60 backdrop-blur-md shadow-sm dark:shadow-none">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+
+            <!-- Logo + Company name -->
+            <div class="flex items-center gap-3">
+                <div class="inline-flex items-center justify-center w-10 h-10 rounded-xl
+                            bg-emerald-100 dark:bg-emerald-950/60
+                            border border-emerald-300 dark:border-emerald-500/30
+                            text-emerald-600 dark:text-emerald-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/>
+                    </svg>
+                </div>
+                <div class="flex flex-col leading-tight">
+                    <span class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">EcoRoute</span>
+                    <!-- Tenant badge -->
+                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 -mt-0.5"
+                          th:text="${activeCompany}">Company Name</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- User info -->
+                <div class="hidden sm:flex flex-col text-right">
+                    <span class="text-xs text-gray-400 dark:text-slate-500 font-semibold uppercase tracking-wider"
+                          th:text="${role}">ROLE</span>
+                    <span class="text-sm font-semibold text-gray-800 dark:text-slate-200"
+                          th:text="${activeUser}">username</span>
+                </div>
+
+                <!-- Role badge -->
+                <span th:class="${role == 'LOGISTICS_MANAGER'
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
+                    : 'bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'}
+                    + ' px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wider'"
+                      th:text="${role == 'LOGISTICS_MANAGER' ? 'Manager' : 'Auditor'}">Manager</span>
+
+                <!-- Team Link (Manager only) -->
+                <a th:if="${role == 'LOGISTICS_MANAGER'}"
+                   th:href="@{/dashboard/team}"
+                   title="Manage Team"
+                   class="p-2.5 rounded-xl bg-gray-100 dark:bg-slate-800/80
+                          border border-gray-200 dark:border-slate-700
+                          text-gray-500 dark:text-emerald-400 hover:scale-105 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all duration-300 flex items-center gap-1 text-xs font-bold uppercase tracking-wider">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+                    </svg>
+                    <span class="hidden md:inline">Team</span>
+                </a>
+
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" title="Toggle theme"
+                        class="p-2.5 rounded-xl bg-gray-100 dark:bg-slate-800/80
+                               border border-gray-200 dark:border-slate-700
+                               text-gray-500 dark:text-yellow-300
+                               hover:scale-110 transition-all duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 hidden dark:block">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/>
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 block dark:hidden">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/>
+                    </svg>
+                </button>
+
+                <!-- Logout -->
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit"
+                            class="p-2.5 rounded-xl bg-gray-100 dark:bg-slate-800/80
+                                   border border-gray-200 dark:border-slate-700
+                                   hover:bg-red-50 dark:hover:bg-red-950/40
+                                   hover:border-red-300 dark:hover:border-red-500/30
+                                   text-gray-500 dark:text-slate-400
+                                   hover:text-red-600 dark:hover:text-red-400 transition-all duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── TAB NAVIGATION ──────────────────────────────────────────────────── -->
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-2">
+        <div class="inline-flex items-center gap-1 bg-gray-100 dark:bg-slate-800/60
+                    border border-gray-200 dark:border-slate-700
+                    p-1 rounded-2xl">
+            <!-- Tab 0: Dashboard — always visible -->
+            <button id="tab-0" class="tab-btn active" onclick="showTab(0)">
+                Dashboard
+            </button>
+
+            <!-- Tab 1: Manager Panel — LOGISTICS_MANAGER only -->
+            <button th:if="${role == 'LOGISTICS_MANAGER'}"
+                    id="tab-1" class="tab-btn" onclick="showTab(1)">
+                Manager Panel
+            </button>
+
+            <!-- Tab 2: Compliance — AUDITOR only -->
+            <button th:if="${role == 'AUDITOR'}"
+                    id="tab-2" class="tab-btn" onclick="showTab(2)">
+                Compliance Certificate
+            </button>
+        </div>
+    </nav>
+
+    <!-- ╔═══════════════════════════════════════════════════════════════════╗ -->
+    <!-- ║  PANEL 0 — DASHBOARD (existing content, unchanged)              ║ -->
+    <!-- ╚═══════════════════════════════════════════════════════════════════╝ -->
+    <div id="panel-0" class="tab-panel active">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+
+        <!-- ── ALERTS ──────────────────────────────────────────────────────── -->
+        <div th:if="${error}"
+             class="mb-8 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/30
+                     text-red-700 dark:text-red-300 px-6 py-4 rounded-2xl flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-red-500 shrink-0">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+            </svg>
+            <span th:text="${error}">Error message</span>
+        </div>
+        <div th:if="${success}"
+             class="mb-8 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30
+                     text-emerald-700 dark:text-emerald-300 px-6 py-4 rounded-2xl flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-emerald-500 shrink-0">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+            <span th:text="${success}">Success message</span>
+        </div>
+
+        <!-- ── KPI METRICS ─────────────────────────────────────────────────── -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <!-- Total Shipments -->
+            <div class="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 relative overflow-hidden hover:shadow-md dark:hover:shadow-none hover:border-emerald-300 dark:hover:border-slate-700 transition-all duration-300">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-100/60 dark:bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-wider">Total Shipments</span>
+                    <span class="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.129-1.125V11.25M3 14.25h16.5"/>
+                        </svg>
+                    </span>
+                </div>
+                <h3 class="text-4xl font-bold text-gray-900 dark:text-white tracking-tight mb-1"
+                    th:text="${totalShipments}">0</h3>
+                <p class="text-xs text-gray-400 dark:text-slate-500">Tenant-isolated shipments</p>
+            </div>
+
+            <!-- Gross CO2 -->
+            <div class="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 relative overflow-hidden hover:shadow-md dark:hover:shadow-none hover:border-red-200 dark:hover:border-slate-700 transition-all duration-300">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-red-50 dark:bg-red-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-wider">Gross CO₂ Emitted</span>
+                    <span class="p-2 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-500/20 text-red-500 dark:text-red-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                        </svg>
+                    </span>
+                </div>
+                <div class="flex items-baseline gap-2 mb-1">
+                    <h3 class="text-4xl font-bold text-gray-900 dark:text-white tracking-tight"
+                        th:text="${totalEmissionsTons}">0.00</h3>
+                    <span class="text-sm font-semibold text-gray-500 dark:text-slate-400">MT</span>
+                </div>
+                <p class="text-xs text-gray-400 dark:text-slate-500">Metric tons CO₂ — <span th:text="${activeCompany}">Company</span> only</p>
+            </div>
+
+            <!-- Net Savings -->
+            <div class="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 relative overflow-hidden hover:shadow-md dark:hover:shadow-none hover:border-emerald-300 dark:hover:border-slate-700 transition-all duration-300">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-100/60 dark:bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-wider">Net Carbon Savings</span>
+                    <span class="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.307a11.95 11.95 0 0 1 5.814-5.519l2.74-1.22m0 0-5.94-2.28m5.94 2.28-2.28 5.941"/>
+                        </svg>
+                    </span>
+                </div>
+                <div class="flex items-baseline gap-2 mb-1">
+                    <h3 class="text-4xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight"
+                        th:text="${totalSavingsTons}">0.00</h3>
+                    <span class="text-sm font-semibold text-emerald-500 dark:text-emerald-500/70">MT</span>
+                </div>
+                <p class="text-xs text-gray-400 dark:text-slate-500">Saved vs. equivalent AIR transport</p>
+            </div>
+        </section>
+
+        <!-- ── MAIN GRID ───────────────────────────────────────────────────── -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+
+            <!-- LEFT PANEL -->
+            <div class="lg:col-span-1 space-y-6">
+
+                <!-- Log Shipment Form (Manager only) -->
+                <div th:if="${role == 'LOGISTICS_MANAGER'}"
+                     class="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm dark:shadow-none">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-emerald-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                        Log New Transit
+                    </h3>
+                    <form th:action="@{/shipments/add}" method="post" class="space-y-4">
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">Tracking ID</label>
+                            <input type="text" name="trackingNumber" required placeholder="TRK-001"
+                                   class="w-full bg-gray-50 dark:bg-slate-950/60 border border-gray-300 dark:border-slate-700 rounded-xl py-2.5 px-4 text-gray-900 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">Weight (Metric Tons)</label>
+                            <input type="number" step="0.01" min="0.01" name="weightTons" required placeholder="12.5"
+                                   class="w-full bg-gray-50 dark:bg-slate-950/60 border border-gray-300 dark:border-slate-700 rounded-xl py-2.5 px-4 text-gray-900 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">Transport Mode</label>
+                            <select name="transportMode" required
+                                    class="w-full bg-gray-50 dark:bg-slate-950/60 border border-gray-300 dark:border-slate-700 rounded-xl py-2.5 px-4 text-gray-900 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm">
+                                <option value="ROAD">ROAD — factor 0.12</option>
+                                <option value="RAIL">RAIL — factor 0.03</option>
+                                <option value="SEA">SEA — factor 0.01</option>
+                                <option value="AIR">AIR — factor 0.50</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">Origin City</label>
+                            <select name="originCity" required
+                                    class="w-full bg-gray-50 dark:bg-slate-950/60 border border-gray-300 dark:border-slate-700 rounded-xl py-2.5 px-4 text-gray-900 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm">
+                                <option th:each="city : ${cities}" th:value="${city}" th:text="${city}">City</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">Destination City</label>
+                            <select name="destinationCity" required
+                                    class="w-full bg-gray-50 dark:bg-slate-950/60 border border-gray-300 dark:border-slate-700 rounded-xl py-2.5 px-4 text-gray-900 dark:text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm">
+                                <option th:each="city : ${cities}" th:value="${city}" th:text="${city}">City</option>
+                            </select>
+                        </div>
+                        <button type="submit"
+                                class="w-full mt-2 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 font-bold py-3 rounded-xl shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all duration-300 text-sm uppercase tracking-wider">
+                            Save Shipment
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Auditor Info Card -->
+                <div th:if="${role == 'AUDITOR'}"
+                     class="bg-white dark:bg-slate-900/50 border border-amber-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm dark:shadow-none">
+                    <h3 class="text-lg font-bold text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z"/>
+                        </svg>
+                        Auditor Authority
+                    </h3>
+                    <p class="text-gray-600 dark:text-slate-400 text-sm leading-relaxed mb-4">
+                        Read-only access to <strong th:text="${activeCompany}">Company</strong>'s emission records.
+                        You can generate Environmental Compliance Certificates from the shipment log.
+                    </p>
+                    <div class="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-300">
+                        Cross-tenant data is structurally inaccessible — you only see records for your company.
+                    </div>
+                </div>
+
+                <!-- Tenant isolation info -->
+                <div class="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm dark:shadow-none">
+                    <h3 class="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-wider mb-3">Tenant Scope</h3>
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="block text-sm font-bold text-gray-900 dark:text-slate-100"
+                                  th:text="${activeCompany}">Company Name</span>
+                            <span class="block text-xs text-gray-400 dark:text-slate-500">Active Tenant — Data Isolated</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Shipment Log -->
+            <div class="lg:col-span-2 bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm dark:shadow-none">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-emerald-500">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+                    </svg>
+                    Operational Logistics Log
+                    <span class="ml-auto text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 rounded-lg"
+                          th:text="${activeCompany} + ' only'">Tenant only</span>
+                </h3>
+
+                <!-- Empty state -->
+                <div th:if="${#lists.isEmpty(shipments)}" class="py-16 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 text-gray-300 dark:text-slate-700 mx-auto mb-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/>
+                    </svg>
+                    <p class="text-gray-500 dark:text-slate-400 font-semibold mb-1">No Shipments Logged</p>
+                    <p class="text-xs text-gray-400 dark:text-slate-600">Shipments logged by your company will appear here.</p>
+                </div>
+
+                <!-- Shipments Table -->
+                <div th:if="${!#lists.isEmpty(shipments)}" class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-slate-800 text-gray-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                <th class="py-3.5 px-4">Tracking ID</th>
+                                <th class="py-3.5 px-4">Route</th>
+                                <th class="py-3.5 px-4 text-center">Mode</th>
+                                <th class="py-3.5 px-4 text-right">Cargo</th>
+                                <th class="py-3.5 px-4 text-right">CO₂</th>
+                                <th class="py-3.5 px-4 text-center">Cert</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-slate-800/60">
+                            <tr th:each="s : ${shipments}"
+                                class="hover:bg-gray-50 dark:hover:bg-slate-900/80 transition-colors duration-150">
+                                <td class="py-4 px-4 font-mono font-bold text-gray-700 dark:text-slate-300 text-xs"
+                                    th:text="${s.trackingNumber}">TRK-001</td>
+                                <td class="py-4 px-4">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-gray-700 dark:text-slate-300 font-semibold text-xs" th:text="${s.originCity}">Chennai</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3 h-3 text-gray-400 dark:text-slate-600 shrink-0">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                                        </svg>
+                                        <span class="text-gray-700 dark:text-slate-300 font-semibold text-xs" th:text="${s.destinationCity}">Mysuru</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-4 text-center">
+                                    <span th:if="${s.transportMode.name() == 'AIR'}"  class="bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20 px-2.5 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider">Air</span>
+                                    <span th:if="${s.transportMode.name() == 'SEA'}"  class="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 px-2.5 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider">Sea</span>
+                                    <span th:if="${s.transportMode.name() == 'RAIL'}" class="bg-teal-100 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20 px-2.5 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider">Rail</span>
+                                    <span th:if="${s.transportMode.name() == 'ROAD'}" class="bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider">Road</span>
+                                </td>
+                                <td class="py-4 px-4 text-right text-gray-700 dark:text-slate-300 font-medium text-xs"
+                                    th:text="${s.weightTons} + ' T'">4.5 T</td>
+                                <td class="py-4 px-4 text-right">
+                                    <span class="text-red-600 dark:text-red-400 font-bold font-mono text-xs"
+                                          th:text="${#numbers.formatDecimal(s.co2Emissions, 1, 1) + ' kg'}">123.4 kg</span>
+                                </td>
+                                <td class="py-4 px-4 text-center">
+                                    <a th:if="${role == 'AUDITOR'}"
+                                       th:href="@{/certificate/{id}(id=${s.id})}"
+                                       class="inline-flex items-center gap-1 px-2.5 py-1.5
+                                              bg-emerald-50 hover:bg-emerald-500
+                                              dark:bg-emerald-500/10 dark:hover:bg-emerald-500
+                                              text-emerald-700 hover:text-white
+                                              dark:text-emerald-400 dark:hover:text-slate-950
+                                              border border-emerald-200 hover:border-emerald-500
+                                              dark:border-emerald-500/20 dark:hover:border-emerald-400
+                                              font-bold text-[10px] rounded-xl transition-all duration-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                                        </svg>
+                                        Cert
+                                    </a>
+                                    <span th:if="${role != 'AUDITOR'}" class="text-gray-300 dark:text-slate-700 text-xs">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    </main>
+    </div><!-- /panel-0 -->
+
+    <!-- ╔═══════════════════════════════════════════════════════════════════╗ -->
+    <!-- ║  PANEL 1 — MANAGER PANEL (LOGISTICS_MANAGER only)               ║ -->
+    <!-- ╚═══════════════════════════════════════════════════════════════════╝ -->
+    <div id="panel-1" class="tab-panel" th:if="${role == 'LOGISTICS_MANAGER'}">
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+
+            <!-- Manager Panel header -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+                            Manager Operations
+                        </h2>
+                        <p class="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+                            Administer routes, resolve alerts, and provision team accounts for
+                            <strong th:text="${activeCompany}">Company</strong>.
+                        </p>
+                    </div>
+                    <span class="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider
+                                 bg-emerald-100 dark:bg-emerald-950/50
+                                 border border-emerald-200 dark:border-emerald-500/30
+                                 text-emerald-700 dark:text-emerald-400">
+                        Manager Only
+                    </span>
+                </div>
+            </div>
+
+            <!-- Two-column grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+
+                <!-- LEFT: Add Team Member form -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800
+                                rounded-3xl p-6 shadow-sm dark:shadow-none">
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                 stroke-width="2" stroke="currentColor" class="w-5 h-5 text-emerald-500">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"/>
+                            </svg>
+                            Add Team Member
+                        </h3>
+
+                        <!-- Flash messages for this panel -->
+                        <div th:if="${error}" class="mb-4 text-xs text-red-600 dark:text-red-400
+                                    bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/30
+                                    rounded-xl px-4 py-3" th:text="${error}">Error</div>
+                        <div th:if="${success}" class="mb-4 text-xs text-emerald-700 dark:text-emerald-300
+                                    bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30
+                                    rounded-xl px-4 py-3" th:text="${success}">Success</div>
+
+                        <form th:action="@{/dashboard/team}" th:object="${teamForm}" method="post" class="space-y-4">
+                            <!-- Validation errors alert banner -->
+                            <div th:if="${#fields.hasErrors('*')}"
+                                 class="mb-4 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/30 rounded-xl px-4 py-3 space-y-1">
+                                <span class="font-bold">Validation Errors:</span>
+                                <ul class="list-disc list-inside mt-1 space-y-0.5">
+                                    <li th:each="err : ${#fields.errors('*')}" th:text="${err}">Error</li>
+                                </ul>
+                            </div>
+
+                            <!-- hidden CSRF field is auto-injected by Spring Security's Thymeleaf dialect -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">Username</label>
+                                <input type="text" th:field="*{username}" required placeholder="john.doe"
+                                       class="w-full bg-gray-50 dark:bg-slate-950/60 border border-gray-300 dark:border-slate-700
+                                              rounded-xl py-2.5 px-4 text-gray-900 dark:text-slate-200
+                                              placeholder-gray-400 dark:placeholder-slate-600
+                                              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">Corporate Email</label>
+                                <input type="email" th:field="*{email}" required placeholder="john@company.com"
+                                       pattern="^[A-Za-z0-9._%+-]+@(gmail\.com|[A-Za-z0-9.-]+\.[A-Za-z]{2,})$"
+                                       title="Email must be a valid address ending with @gmail.com or a registered corporate domain."
+                                       class="w-full bg-gray-50 dark:bg-slate-950/60 border border-gray-300 dark:border-slate-700
+                                              rounded-xl py-2.5 px-4 text-gray-900 dark:text-slate-200
+                                              placeholder-gray-400 dark:placeholder-slate-600
+                                              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">Temporary Password</label>
+                                <input type="password" th:field="*{password}" required placeholder="Min 8 characters"
+                                       pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,30}$"
+                                       title="Password must be 8-30 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character."
+                                       class="w-full bg-gray-50 dark:bg-slate-950/60 border border-gray-300 dark:border-slate-700
+                                              rounded-xl py-2.5 px-4 text-gray-900 dark:text-slate-200
+                                              placeholder-gray-400 dark:placeholder-slate-600
+                                              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider block">Role</label>
+                                <select th:field="*{roleStr}" required
+                                        class="w-full bg-gray-50 dark:bg-slate-950/60 border border-gray-300 dark:border-slate-700
+                                               rounded-xl py-2.5 px-4 text-gray-900 dark:text-slate-200
+                                               focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm">
+                                    <option value="LOGISTICS_MANAGER">Logistics Manager</option>
+                                    <option value="AUDITOR">Auditor (Read-Only)</option>
+                                </select>
+                            </div>
+                            <button type="submit"
+                                    class="w-full mt-1 bg-emerald-500 hover:bg-emerald-400 text-white font-bold
+                                           py-3 rounded-xl shadow-lg shadow-emerald-500/20
+                                           active:scale-[.98] transition-all duration-300 text-sm uppercase tracking-wider">
+                                Provision Account
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Team Directory table -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800
+                                rounded-3xl p-6 shadow-sm dark:shadow-none">
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                 stroke-width="2" stroke="currentColor" class="w-5 h-5 text-emerald-500">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>
+                            </svg>
+                            Team Directory
+                            <span class="ml-auto text-xs font-semibold text-emerald-600 dark:text-emerald-400
+                                         bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200
+                                         dark:border-emerald-500/20 px-2 py-0.5 rounded-lg"
+                                  th:text="${activeCompany} + ' only'">Tenant only</span>
+                        </h3>
+
+                        <!-- Empty state -->
+                        <div th:if="${#lists.isEmpty(teamMembers)}" class="py-12 text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                 stroke-width="1.5" stroke="currentColor"
+                                 class="w-10 h-10 text-gray-300 dark:text-slate-700 mx-auto mb-3">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>
+                            </svg>
+                            <p class="text-gray-500 dark:text-slate-400 font-semibold text-sm">No team members yet</p>
+                            <p class="text-xs text-gray-400 dark:text-slate-600 mt-1">Provision accounts using the form on the left.</p>
+                        </div>
+
+                        <!-- Team table -->
+                        <div th:if="${!#lists.isEmpty(teamMembers)}" class="overflow-x-auto">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="border-b border-gray-200 dark:border-slate-800
+                                               text-gray-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                        <th class="py-3.5 px-4">Username</th>
+                                        <th class="py-3.5 px-4">Email</th>
+                                        <th class="py-3.5 px-4 text-center">Role</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-slate-800/60">
+                                    <tr th:each="member : ${teamMembers}"
+                                        class="hover:bg-gray-50 dark:hover:bg-slate-900/80 transition-colors duration-150">
+                                        <td class="py-3.5 px-4 font-semibold text-gray-900 dark:text-slate-100 text-sm"
+                                            th:text="${member.username}">username</td>
+                                        <td class="py-3.5 px-4 text-gray-500 dark:text-slate-400 text-xs"
+                                            th:text="${member.email != null ? member.email : '—'}">email</td>
+                                        <td class="py-3.5 px-4 text-center">
+                                            <span th:if="${member.role.name() == 'LOGISTICS_MANAGER'}"
+                                                  class="bg-emerald-100 dark:bg-emerald-500/10
+                                                         text-emerald-700 dark:text-emerald-400
+                                                         border border-emerald-200 dark:border-emerald-500/20
+                                                         px-2.5 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                                                Manager
+                                            </span>
+                                            <span th:if="${member.role.name() == 'AUDITOR'}"
+                                                  class="bg-amber-100 dark:bg-amber-500/10
+                                                         text-amber-700 dark:text-amber-400
+                                                         border border-amber-200 dark:border-amber-500/20
+                                                         px-2.5 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                                                Auditor
+                                            </span>
+                                            <span th:if="${member.role.name() == 'SYSTEM_ADMIN'}"
+                                                  class="bg-slate-100 dark:bg-slate-500/10
+                                                         text-slate-700 dark:text-slate-400
+                                                         border border-slate-200 dark:border-slate-500/20
+                                                         px-2.5 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                                                System Admin
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /two-column grid -->
+        </main>
+    </div><!-- /panel-1 -->
+
+    <!-- ╔═══════════════════════════════════════════════════════════════════╗ -->
+    <!-- ║  PANEL 2 — COMPLIANCE CERTIFICATE (AUDITOR only)                ║ -->
+    <!-- ╚═══════════════════════════════════════════════════════════════════╝ -->
+    <div id="panel-2" class="tab-panel" th:if="${role == 'AUDITOR'}">
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+
+            <!-- Section header -->
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+                    Compliance Certificates
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+                    Environmental compliance documents for
+                    <strong th:text="${activeCompany}">Company</strong>
+                    — verified &amp; ready for audit export.
+                </p>
+            </div>
+
+            <!-- Empty state -->
+            <div th:if="${#lists.isEmpty(shipments)}"
+                 class="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800
+                         rounded-3xl p-16 text-center shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                     stroke-width="1.5" stroke="currentColor"
+                     class="w-12 h-12 text-gray-300 dark:text-slate-700 mx-auto mb-4">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                </svg>
+                <p class="text-gray-500 dark:text-slate-400 font-semibold">No shipments available for certification.</p>
+                <p class="text-xs text-gray-400 dark:text-slate-600 mt-1">Shipments logged by your company will appear here.</p>
+            </div>
+
+            <!-- Certificate cards grid -->
+            <div th:if="${!#lists.isEmpty(shipments)}"
+                 class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+
+                <div th:each="s : ${shipments}"
+                     class="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800
+                             rounded-3xl p-5 shadow-sm dark:shadow-none
+                             hover:border-emerald-300 dark:hover:border-emerald-500/30
+                             hover:shadow-md dark:hover:shadow-none transition-all duration-300
+                             flex flex-col gap-3">
+
+                    <!-- Tracking + mode badges -->
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <p class="font-mono font-bold text-gray-900 dark:text-slate-100 text-sm"
+                               th:text="${s.trackingNumber}">TRK-001</p>
+                            <p class="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
+                                <span th:text="${s.originCity}">Origin</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                     stroke-width="2.5" stroke="currentColor"
+                                     class="w-3 h-3 inline text-gray-400 mx-1">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                                </svg>
+                                <span th:text="${s.destinationCity}">Dest</span>
+                            </p>
+                        </div>
+                        <span th:if="${s.transportMode.name() == 'AIR'}"
+                              class="bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20 px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase shrink-0">AIR</span>
+                        <span th:if="${s.transportMode.name() == 'SEA'}"
+                              class="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase shrink-0">SEA</span>
+                        <span th:if="${s.transportMode.name() == 'RAIL'}"
+                              class="bg-teal-100 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20 px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase shrink-0">RAIL</span>
+                        <span th:if="${s.transportMode.name() == 'ROAD'}"
+                              class="bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase shrink-0">ROAD</span>
+                    </div>
+
+                    <!-- Emissions stat -->
+                    <div class="flex items-center justify-between
+                                bg-gray-50 dark:bg-slate-800/50 rounded-xl px-4 py-2.5">
+                        <span class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">CO₂ Emitted</span>
+                        <span class="font-mono font-bold text-red-600 dark:text-red-400 text-sm"
+                              th:text="${#numbers.formatDecimal(s.co2Emissions, 1, 1) + ' kg'}">— kg</span>
+                    </div>
+
+                    <!-- Weight stat -->
+                    <div class="flex items-center justify-between
+                                bg-gray-50 dark:bg-slate-800/50 rounded-xl px-4 py-2.5">
+                        <span class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Cargo Weight</span>
+                        <span class="font-semibold text-gray-700 dark:text-slate-300 text-sm"
+                              th:text="${s.weightTons + ' T'}">— T</span>
+                    </div>
+
+                    <!-- Download Certificate CTA -->
+                    <a th:href="@{/certificate/{id}(id=${s.id})}"
+                       class="mt-1 w-full flex items-center justify-center gap-2
+                              py-3 rounded-xl font-bold text-sm uppercase tracking-wider
+                              bg-emerald-600 hover:bg-emerald-500 text-white
+                              shadow-lg shadow-emerald-600/20
+                              active:scale-[.98] transition-all duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                             stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                        </svg>
+                        Download Certificate
+                    </a>
+
+                </div><!-- /card -->
+            </div><!-- /grid -->
+
+        </main>
+    </div><!-- /panel-2 -->
+
+    <script th:inline="javascript">
+        function toggleTheme() {
+            var isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        function showTab(index) {
+            // Deactivate all panels and buttons
+            document.querySelectorAll('.tab-panel').forEach(function(p) {
+                p.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(function(b) {
+                b.classList.remove('active');
+            });
+            // Activate chosen panel and its button
+            var panel = document.getElementById('panel-' + index);
+            if (panel) panel.classList.add('active');
+            var btn = document.getElementById('tab-' + index);
+            if (btn) btn.classList.add('active');
+        }
+
+        // Auto-activate the correct tab on page load (server-side routing via ?tab=)
+        (function () {
+            var activeTab = /*[[${activeTab}]]*/ 0;
+            if (activeTab > 0) showTab(activeTab);
+        }());
+    </script>
+</body>
+</html>

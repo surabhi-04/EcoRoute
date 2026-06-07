@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — EcoRoute Control Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- ① Config BEFORE CDN -->
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Outfit', 'sans-serif'] } } }
+        };
+        // Immediate execution to prevent flash of wrong theme
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <!-- ② CDN after config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        html { transition: background-color 0.4s ease; }
+        * { transition: background-color 0.25s ease, border-color 0.2s ease, color 0.15s ease, box-shadow 0.2s ease; }
+    </style>
+</head>
+<body class="min-h-screen font-sans pb-12 flex flex-col justify-between transition-colors duration-300
+             bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900
+             dark:from-[#0b0f19] dark:via-[#0f172a] dark:to-[#1e293b] dark:text-slate-100">
+
+    <!-- ── HEADER ──────────────────────────────────────────────────────────── -->
+    <header class="sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-[#0b0f19]/60 backdrop-blur-md">
+         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+
+            <!-- Logo + App name -->
+            <div class="flex items-center gap-3">
+                <div class="inline-flex items-center justify-center w-10 h-10 rounded-xl
+                            bg-emerald-100 dark:bg-emerald-950/60
+                            border border-emerald-300 dark:border-emerald-500/30
+                            text-emerald-600 dark:text-emerald-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/>
+                    </svg>
+                </div>
+                <div class="flex flex-col leading-tight">
+                    <span class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">EcoRoute Control Center</span>
+                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 -mt-0.5">Central Infrastructure Terminal</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- User info -->
+                <div class="hidden sm:flex flex-col text-right">
+                    <span class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">System Admin</span>
+                    <span class="text-sm font-semibold text-slate-800 dark:text-slate-200" th:text="${activeUser}">admin</span>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" title="Toggle theme"
+                        class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                               text-slate-500 dark:text-yellow-300 shadow-sm hover:scale-105 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 hidden dark:block">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/>
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 block dark:hidden">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/>
+                    </svg>
+                </button>
+
+                <!-- Logout -->
+                <form th:action="@{/admin/logout}" method="post">
+                    <button type="submit"
+                            class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                                   hover:bg-red-50 dark:hover:bg-red-950/40 hover:border-red-300 dark:hover:border-red-500/30
+                                   text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+         </div>
+    </header>
+
+    <!-- ── MAIN CONTENT ────────────────────────────────────────────────────── -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10 flex-grow w-full">
+
+        <!-- Banner Alerts -->
+        <div th:if="${success}"
+             class="mb-8 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30
+                     text-emerald-700 dark:text-emerald-300 px-6 py-4 rounded-2xl flex items-center gap-3 animate-fade-in">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0 animate-bounce">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+            <span th:text="${success}">Approved successfully!</span>
+        </div>
+
+        <div th:if="${error}"
+             class="mb-8 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/30
+                     text-red-700 dark:text-red-300 px-6 py-4 rounded-2xl flex items-center gap-3 animate-fade-in">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-red-500 shrink-0">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+            </svg>
+            <span th:text="${error}">Failed.</span>
+        </div>
+
+        <!-- ── METRICS HEADER ──────────────────────────────────────────────── -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Pending Company Applications -->
+            <div class="bg-white/90 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 relative overflow-hidden hover:shadow-md transition-all duration-300">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-amber-100/50 dark:bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-xs font-bold text-slate-500 dark:text-slate-500 uppercase tracking-wider">Pending Company Applications</span>
+                    <span class="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-500/20 text-amber-600 dark:text-amber-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                        </svg>
+                    </span>
+                </div>
+                <h3 class="text-4xl font-bold tracking-tight mb-1 text-slate-900 dark:text-white" th:text="${pendingCount}">0</h3>
+                <p class="text-xs text-slate-400 dark:text-slate-500">Awaiting central administrative review</p>
+            </div>
+
+            <!-- Active Enterprises -->
+            <div class="bg-white/90 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 relative overflow-hidden hover:shadow-md transition-all duration-300">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-100/50 dark:bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-xs font-bold text-slate-500 dark:text-slate-500 uppercase tracking-wider">Active Enterprises</span>
+                    <span class="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                        </svg>
+                    </span>
+                </div>
+                <h3 class="text-4xl font-bold tracking-tight mb-1 text-slate-900 dark:text-white" th:text="${activeCount}">0</h3>
+                <p class="text-xs text-slate-400 dark:text-slate-500">Onboarded tenants in active operation</p>
+            </div>
+
+            <!-- Rejected Entities -->
+            <div class="bg-white/90 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 relative overflow-hidden hover:shadow-md transition-all duration-300">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-red-100/50 dark:bg-red-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-xs font-bold text-slate-500 dark:text-slate-500 uppercase tracking-wider">Rejected Entities</span>
+                    <span class="p-2 rounded-xl bg-red-100 dark:bg-red-950/60 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                        </svg>
+                    </span>
+                </div>
+                <h3 class="text-4xl font-bold tracking-tight mb-1 text-slate-900 dark:text-white" th:text="${rejectedCount}">0</h3>
+                <p class="text-xs text-slate-400 dark:text-slate-500">Access denied or terminated registrations</p>
+            </div>
+        </section>
+
+        <!-- ── DATA GRID ───────────────────────────────────────────────────── -->
+        <section class="bg-white/90 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-emerald-600 dark:text-emerald-400">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 12.408 9-9m-9 0H18m-9 9H18"/>
+                        </svg>
+                        Pending Tenant Applications
+                    </h3>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Review new organization registrations and approve their corporate workspaces.</p>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${#lists.isEmpty(pendingCompanies)}" class="py-20 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z"/>
+                </svg>
+                <p class="text-slate-500 dark:text-slate-400 font-semibold mb-1">Queue is Empty</p>
+                <p class="text-xs text-slate-400 dark:text-slate-600">All recent tenant registration requests have been approved or rejected.</p>
+            </div>
+
+            <!-- Data Grid Table -->
+            <div th:if="${!#lists.isEmpty(pendingCompanies)}" class="overflow-x-auto">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
+                            <th class="py-3.5 px-4 text-slate-900 dark:text-slate-300">Company Name</th>
+                            <th class="py-3.5 px-4 text-slate-900 dark:text-slate-300">Business Sector</th>
+                            <th class="py-3.5 px-4 text-slate-900 dark:text-slate-300">Initial Manager</th>
+                            <th class="py-3.5 px-4 text-slate-900 dark:text-slate-300 font-medium">Corporate Email</th>
+                            <th class="py-3.5 px-4 text-slate-900 dark:text-slate-300 font-medium">Registration Timestamp</th>
+                            <th class="py-3.5 px-4 text-center text-slate-900 dark:text-slate-300 font-medium">Interactive Controls</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        <tr th:each="c : ${pendingCompanies}"
+                            class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors duration-150">
+                            <td class="py-4 px-4 font-bold text-slate-700 dark:text-slate-300 text-sm" th:text="${c.name}">Acme Logistics</td>
+                            <td class="py-4 px-4 text-slate-600 dark:text-slate-400 text-xs font-semibold" th:text="${c.industrySector}">Supply Chain</td>
+                            <td class="py-4 px-4 text-slate-600 dark:text-slate-400 text-sm font-mono" th:text="${c.managerUsername}">acmemgr</td>
+                            <td class="py-4 px-4 text-slate-600 dark:text-slate-400 text-sm" th:text="${c.managerEmail}">manager@acme.com</td>
+                            <td class="py-4 px-4 text-slate-400 dark:text-slate-500 text-xs" th:text="${c.createdAt}">2026-06-07 10:00</td>
+                            <td class="py-4 px-4 text-center">
+                                <div class="inline-flex gap-2 justify-center w-full">
+                                    <!-- Approve Form -->
+                                    <form th:action="@{/admin/companies/{id}/approve(id=${c.id})}" method="post">
+                                        <button type="submit"
+                                                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/10 active:scale-95 transition-all duration-200">
+                                            Approve Access
+                                        </button>
+                                    </form>
+                                    <!-- Reject Form -->
+                                    <form th:action="@{/admin/companies/{id}/reject(id=${c.id})}" method="post">
+                                        <button type="submit"
+                                                class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-md shadow-red-500/10 active:scale-95 transition-all duration-200">
+                                            Reject Registration
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ── AUDIT LOGS GRID ────────────────────────────────────────────── -->
+        <section class="mt-8 bg-white/90 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-emerald-600 dark:text-emerald-400">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.693 2.166 1.638m-7.377 12.408 9-9m-9 0H18m-9 9H18"/>
+                        </svg>
+                        Platform Audit Trail
+                    </h3>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Real-time system events, onboarding operations, and tenant logs across the corporate hierarchy.</p>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${#lists.isEmpty(auditLogs)}" class="py-12 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <p class="text-slate-500 dark:text-slate-400 font-semibold text-sm">Audit Trail is Empty</p>
+                <p class="text-xs text-slate-400 dark:text-slate-600 mt-1">Logs will appear once operations are recorded.</p>
+            </div>
+
+            <!-- Audit Logs Table -->
+            <div th:if="${!#lists.isEmpty(auditLogs)}" class="overflow-x-auto">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
+                            <th class="py-3.5 px-4 text-slate-900 dark:text-slate-300">Timestamp</th>
+                            <th class="py-3.5 px-4 text-center text-slate-900 dark:text-slate-300">Action</th>
+                            <th class="py-3.5 px-4 text-slate-900 dark:text-slate-300">User / Company</th>
+                            <th class="py-3.5 px-4 text-slate-900 dark:text-slate-300">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
+                        <tr th:each="log : ${auditLogs}" class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors duration-150">
+                            <td class="py-3 px-4 text-xs font-mono text-slate-400 dark:text-slate-500" th:text="${#temporals.format(log.timestamp, 'yyyy-MM-dd HH:mm:ss')}">2026-06-07 18:50:00</td>
+                            <td class="py-3 px-4 text-center shrink-0">
+                                <span th:if="${log.action == 'TENANT_APPROVE'}" class="bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider inline-block">Approve</span>
+                                <span th:if="${log.action == 'TENANT_REJECT'}" class="bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-500/20 px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider inline-block">Reject</span>
+                                <span th:if="${log.action == 'TENANT_REGISTER'}" class="bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/20 px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider inline-block">Register</span>
+                                <span th:if="${log.action == 'USER_PROVISION'}" class="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-500/20 px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider inline-block">Provision</span>
+                                <span th:if="${log.action == 'SHIPMENT_LOG'}" class="bg-teal-100 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-300 dark:border-teal-500/20 px-2 py-0.5 text-[10px] font-bold rounded-lg uppercase tracking-wider inline-block">Shipment</span>
+                            </td>
+                            <td class="py-3 px-4 text-sm">
+                                <span class="font-bold text-slate-700 dark:text-slate-300" th:text="${log.username}">admin</span>
+                                <span class="text-xs text-slate-400 dark:text-slate-500 block" th:text="${log.companyName}">EcoRoute System</span>
+                            </td>
+                            <td class="py-3 px-4 text-xs font-semibold text-slate-600 dark:text-slate-400" th:text="${log.details}">Action details description message.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-400 dark:text-slate-500 py-6 border-t border-slate-200 dark:border-slate-800/80 mt-10">
+        &copy; 2026 EcoRoute Control Panel. All Rights Reserved.
+    </footer>
+
+    <script>
+        function toggleTheme() {
+            var isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+    </script>
+</body>
+</html>

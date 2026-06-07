@@ -1,0 +1,17 @@
+target/
+apache-maven-3.9.6/
+.idea/
+.settings/
+.classpath
+.project
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+.DS_Store
+Thumbs.db
+.gemini/
+.antigravity/

@@ -1,0 +1,22 @@
+name: EcoRoute Enterprise CI/CD Pipeline
+on:
+ push:
+  branches: [ "main" ]
+jobs:
+ build-verify-deploy:
+  runs-on: ubuntu-latest
+  steps:
+  - name: Checkout Source Code Repository
+    uses: actions/checkout@v3
+  - name: Initialize Java Development Kit
+    uses: actions/setup-java@v3
+    with:
+     java-version: '17'
+     distribution: 'temurin'
+     cache: 'maven'
+  - name: Run Quality Verification & Compile Build Assets
+    run: mvn clean package
+  - name: Docker Container Packaging & Verification
+    run: |
+     docker build -t ecoroute-app:latest .
+     echo "Docker image built successfully. System is deployment ready."

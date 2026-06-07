@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - EcoRoute Green Logistics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- ① Set Tailwind config BEFORE the CDN loads -->
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Outfit', 'sans-serif'] } } }
+        };
+        // Immediate execution to prevent flash of wrong theme
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <!-- ② Load Tailwind CDN after config is set -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        html, body { background-color: #f8fafc; transition: background-color 0.4s ease, color 0.3s ease; }
+        html.dark, html.dark body { background-color: #0b0f19; }
+        * { transition: background-color 0.25s ease, border-color 0.2s ease, color 0.15s ease, box-shadow 0.2s ease; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 font-sans relative transition-colors duration-300
+             bg-slate-50 text-slate-900 dark:bg-[#0b0f19] dark:text-slate-100">
+
+    <!-- Glow blobs -->
+    <div class="absolute -top-16 -left-16 w-72 h-72 bg-emerald-400/5 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-16 -right-16 w-72 h-72 bg-teal-400/5 dark:bg-teal-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Theme Toggle -->
+    <button onclick="toggleTheme()" title="Toggle theme"
+            class="fixed top-5 right-5 z-50 p-2.5 rounded-xl
+                   bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                   text-slate-500 dark:text-yellow-300
+                   shadow-md hover:scale-110 transition-all duration-300">
+        <!-- Sun — visible in dark mode -->
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+             class="w-5 h-5 hidden dark:block">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/>
+        </svg>
+        <!-- Moon — visible in light mode -->
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+             class="w-5 h-5 block dark:hidden">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/>
+        </svg>
+    </button>
+
+    <div class="relative w-full max-w-md">
+        <!-- Card -->
+        <div class="relative p-8 bg-white shadow-xl border border-slate-200/60 rounded-2xl dark:bg-slate-900/60 dark:backdrop-blur-md dark:border-slate-800">
+
+            <!-- Branding -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl
+                            bg-emerald-50 dark:bg-emerald-950/60
+                            border border-emerald-200 dark:border-emerald-500/30
+                            text-emerald-600 dark:text-emerald-400 mb-4 shadow-inner">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold tracking-tight mb-1 text-slate-900 dark:text-white">EcoRoute</h1>
+                <p class="text-slate-500 dark:text-slate-400 text-sm">Tenant Workspace Log-In</p>
+            </div>
+
+            <!-- Success Alert -->
+            <div th:if="${success}"
+                 class="mb-5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30
+                         text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-2xl text-sm flex items-center gap-3 animate-fade-in">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 shrink-0 text-emerald-500">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                </svg>
+                <span th:text="${success}">Action successful.</span>
+            </div>
+
+            <!-- Error Alert -->
+            <div th:if="${param.error}"
+                 class="mb-5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-500/30
+                         text-red-700 dark:text-red-300 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 shrink-0 text-red-500">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+                </svg>
+                <span th:if="${session != null and session.SPRING_SECURITY_LAST_EXCEPTION != null}" th:text="${session.SPRING_SECURITY_LAST_EXCEPTION.message}">Invalid credentials.</span>
+                <span th:unless="${session != null and session.SPRING_SECURITY_LAST_EXCEPTION != null}">Invalid credentials — check username and password.</span>
+            </div>
+
+            <!-- Logout Alert -->
+            <div th:if="${param.logout}"
+                 class="mb-5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30
+                         text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 shrink-0 text-emerald-500">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                </svg>
+                Signed out successfully.
+            </div>
+
+            <!-- Login Form -->
+            <form th:action="@{/login}" method="post" class="space-y-5">
+                <!-- Username -->
+                <div class="space-y-1.5">
+                    <label for="username" class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 dark:text-slate-500 pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                            </svg>
+                        </span>
+                        <input type="text" id="username" name="username" required
+                               placeholder="manager1 or auditor1"
+                               class="w-full text-slate-900 placeholder-slate-400 bg-slate-50 border border-slate-200 dark:text-white dark:placeholder-slate-500 dark:bg-slate-950/50 dark:border-slate-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 text-sm">
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="space-y-1.5">
+                    <label for="password" class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 dark:text-slate-500 pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                            </svg>
+                        </span>
+                        <input type="password" id="password" name="password" required
+                               placeholder="••••••••"
+                               class="w-full text-slate-900 placeholder-slate-400 bg-slate-50 border border-slate-200 dark:text-white dark:placeholder-slate-500 dark:bg-slate-950/50 dark:border-slate-800 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 text-sm">
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-600/25 active:scale-[0.98] transition-all text-sm uppercase tracking-wider">
+                    Sign In to Workspace
+                </button>
+            </form>
+
+            <div class="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
+                Want to register a new tenant? <a th:href="@{/register/tenant}" class="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold">Register here</a>
+            </div>
+
+            <!-- Workspace selection back navigation -->
+            <div class="mt-4 text-center text-xs">
+                <a th:href="@{/}" class="text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors duration-150">
+                    &larr; Return to Welcome Screen
+                </a>
+            </div>
+
+            <!-- Hint -->
+            <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800/80
+                        text-center text-xs text-slate-400 dark:text-slate-500 space-y-1">
+                <p><span class="text-emerald-600 dark:text-emerald-400 font-semibold">GreenFleet:</span> manager1 / auditor1</p>
+                <p><span class="text-blue-600 dark:text-blue-400 font-semibold">OceanCargo:</span> manager2 / auditor2</p>
+                <p class="text-slate-400 dark:text-slate-500">Password: <span class="font-semibold">password</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            var isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+    </script>
+</body>
+</html>
