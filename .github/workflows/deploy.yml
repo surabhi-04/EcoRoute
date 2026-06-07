@@ -5,6 +5,19 @@ on:
 jobs:
  build-verify-deploy:
   runs-on: ubuntu-latest
+  services:
+   mysql:
+    image: mysql:8.0
+    env:
+     MYSQL_ROOT_PASSWORD: root
+     MYSQL_DATABASE: ecoroute_db
+    ports:
+     - 3306:3306
+    options: >-
+     --health-cmd="mysqladmin ping"
+     --health-interval=10s
+     --health-timeout=5s
+     --health-retries=3
   steps:
   - name: Checkout Source Code Repository
     uses: actions/checkout@v3
@@ -16,6 +29,9 @@ jobs:
      cache: 'maven'
   - name: Run Quality Verification & Compile Build Assets
     run: mvn clean package
+    env:
+     MYSQL_DB_USERNAME: root
+     MYSQL_DB_PASSWORD: root
   - name: Docker Container Packaging & Verification
     run: |
      docker build -t ecoroute-app:latest .
