@@ -6,9 +6,9 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Stage 2: Production Runtime Environment for Vercel
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jre
 WORKDIR /runtime
 COPY --from=build-engine /app/target/ecoroute-0.0.1-SNAPSHOT.jar ecoroute.jar
 ENV PORT=8080
-EXPOSE ${PORT}
+EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar ecoroute.jar"]
