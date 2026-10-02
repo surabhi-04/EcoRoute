@@ -9,5 +9,6 @@ RUN mvn clean package -DskipTests
 FROM openjdk:17-slim
 WORKDIR /runtime
 COPY --from=build-engine /app/target/ecoroute-0.0.1-SNAPSHOT.jar ecoroute.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "ecoroute.jar"]
+ENV PORT=8080
+EXPOSE ${PORT}
+ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar ecoroute.jar"]
